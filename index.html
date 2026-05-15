@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Валідатор для перевірки методології БЕМ за розширеними правилами.">
+  <title>FLS БЕМ валідатор</title>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" href="img/favicon.ico" sizes="48x48">
+  <link href="css/style.css" rel="stylesheet">
+
+  <script src="js/validation.js" defer></script>
+  <script src="js/main.js" defer></script>
+</head>
+
+<body>
+  <div class="wrapper">
+    <header id="page-header" class="header">
+      <div class="header__container">
+        <h1 class="title">Розширений <span class="title__mark">БЕМ</span> валідатор <span
+            class="title__small">v0.2.3</span></h1>
+      </div>
+    </header>
+
+    <main class="main">
+      <article class="validator">
+        <div class="validator__container">
+          <div class="validator__main">
+            <label for="bem-input" class="visually-hidden">HTML код для перевірки</label>
+            <textarea id="bem-input" class="validator__textarea" placeholder="Вставте в це поле Ваш HTML код"
+              data-validate-input autocomplete="off" autocorrect="off" spellcheck="false" data-gramm="false"></textarea>
+            <button class="validator__button" type="button" data-validate-submit>
+              <span>Перевірити</span>
+            </button>
+          </div>
+          <div class="validator__inner">
+            <div class="validator__result result" data-validate-result>
+            </div>
+
+            <div class="tree tree--hidden">
+              <div class="tree__container">
+                <div class="tree__column">
+
+                  <div class="deep-tree">
+                    <h2 class="deep-tree__title">
+                      Рівні вкладеності:
+                      <span class="deep-tree__digit">1</span>
+                    </h2>
+                    <input class="deep-tree__range" type="range" min="1" max="1" value="1">
+                  </div>
+                </div>
+                <div class="tree__column">
+                  <h2 class="tree__title-column">Структура розмітки:</h2>
+                  <div class="view-tree">
+                    <div class="view-tree__content"></div>
+                    <div class="view-tree__placeholder">
+                      <p>Щоб побачити структуру розмітки, вставте код HTML</p>
+                      <p>Можна вставити як окремі блоки, так&nbsp;і&nbsp;код цілої сторінки.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <img class="character-image" src="https://edu.fls.guru/img/character.webp" alt="Жека">
+        </div>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__container">
+        <p>Створено спеціально для <a href="https://edu.fls.guru/">"Найкращого курсу з розробки якісних
+            WEB-інтерфейсів"</a></p>
+      </div>
+      <a href="#page-header" id="scroll-button">
+        <img src="img/arrow-to-top.svg" alt="Прокрутити до верху сторінки">
+      </a>
+    </footer>
+  </div>
+</body>
+
+</html>

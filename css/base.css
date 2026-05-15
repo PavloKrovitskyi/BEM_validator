@@ -1,0 +1,140 @@
+html {
+  scroll-behavior: smooth;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  font-family: "Noto Sans", sans-serif;
+  line-height: 1.3;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow: clip;
+}
+
+[class*="__container"] {
+  max-width: 1600px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.main {
+  flex-grow: 1;
+}
+
+.header {
+  padding-block: 1.875rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+/*==============================================================================================================*/
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+}
+.title__mark {
+  color: var(--text-accent);
+}
+.title__small {
+  font-size: 0.5em;
+}
+
+/*==============================================================================================================*/
+.footer {
+  padding-block: 2rem;
+  border-top: solid var(--border-subtle) 0.0625rem;
+  background-color: var(--bg-secondary);
+}
+
+.footer__container p {
+  text-align: center;
+  color: var(--text-primary);
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.footer__container a {
+  position: relative;
+  display: inline-block;
+  color: var(--text-accent);
+}
+
+.footer__container a::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 0.125rem;
+
+  transform: scale(0, 1);
+  transform-origin: right;
+  transition: transform 0.3s;
+  background-color: var(--text-accent);
+}
+
+.footer__container a:hover::before {
+  transform: scale(1, 1);
+  transform-origin: left;
+}
+
+/*==============================================================================================================*/
+.character-image {
+  position: fixed;
+  bottom: 0;
+  right: 3%;
+  z-index: 101;
+  transform: translateY(100%);
+  max-width: 100%;
+  width: clamp(11.25rem, 4.513rem + 33.68vw, 31.25rem);
+  height: 100svh;
+  object-fit: contain;
+  object-position: bottom;
+  transition: transform 1s;
+  pointer-events: none;
+}
+.validator__container:has(.no-errors) .character-image {
+  transform: translateY(0);
+}
+
+/*==============================================================================================================*/
+#scroll-button {
+  position: fixed;
+  right: 3.125rem;
+  bottom: 6.25rem;
+  z-index: 102;
+  display: block;
+  height: 3.125rem;
+  width: 3.125rem;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+  transform: translateY(100%);
+}
+#scroll-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+#scroll-button.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
