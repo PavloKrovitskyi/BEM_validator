@@ -22,7 +22,6 @@
   border: 0.125rem solid var(--text-accent);
 
   font-size: 1rem;
-  font-family: "Ubuntu Mono", monospace;
   color: var(--text-primary);
 
   resize: none;
@@ -166,7 +165,6 @@
   font-size: 1.0625rem;
 }
 .item-result__desc code {
-  font-family: "Ubuntu Mono", monospace;
   color: var(--text-secondary);
 }
 

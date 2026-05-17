@@ -56,10 +56,9 @@
 
   // --- State ---
   let maxDeep = 1;
-  let isWholePage = false;
   let currentErrorClassNames = new Set();
-  let bodyClass = '';
-  let htmlClass = '';
+  let bodyClass = null;
+  let htmlClass = null;
 
   // --- Constants ---
   const ERROR_CODES = {
@@ -72,7 +71,6 @@
     moreThanOneElement: 'MORE_THAN_ONE_ELEMENT',
     hierarchy: 'HIERARCHY',
     onlyClosestParent: 'ONLY_CLOSEST_PARENT',
-    parseError: 'PARSE_ERROR',
   };
 
   const ERROR_TRANSLATION = {
@@ -85,11 +83,9 @@
     [ERROR_CODES.moreThanOneElement]: "Об'єкт не може бути одночасно двома BEM-елементами",
     [ERROR_CODES.hierarchy]: 'При формуванні імені класу не має бути спроби ієрархії',
     [ERROR_CODES.onlyClosestParent]: 'Назва елементу починається не з поточного батьківського БЕМ-блоку',
-    [ERROR_CODES.parseError]: 'Не вдалося розпарсити HTML. Перевірте валідність коду',
   };
 
   const headersOrder = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
-  const wholePageMarkers = ['META', 'TITLE', 'LINK'];
   const skippedTags = ['SCRIPT', 'META', 'TITLE', 'LINK', 'NOSCRIPT', 'BR'];
   const highlightColorNum = 0;
 
@@ -124,8 +120,8 @@
     while ((pos = joinedArray.lastIndexOf(searchStr, pos - 1)) !== -1) {
       const after = pos + searchStr.length;
       const nextChar = joinedArray[after] || '';
-      // Valid: end of string, space (next segment), __ (BEM element), or -- (BEM modifier)
-      if (nextChar === '' || nextChar === ' ' || nextChar === '_' || (nextChar === '-' && joinedArray[after + 1] === '-')) {
+      // Valid: end of string, class separator, space (next segment), __ (BEM element), or -- (BEM modifier)
+      if (nextChar === '' || nextChar === '.' || nextChar === ' ' || nextChar === '_' || (nextChar === '-' && joinedArray[after + 1] === '-')) {
         lastIndex = pos;
         break;
       }
@@ -145,9 +141,9 @@
 
   function parseClassName(className) {
     const regExp =
-      /(?:^|\s)([a-z0-9]+(?:-[a-z0-9]+)*)(?:__([a-z0-9]+(?:-[a-z0-9]+)*))?(?:--([a-z0-9]+(?:-[a-z0-9]+)*))?(?:--([a-z0-9]+(?:-[a-z0-9]+)*))?/i;
+      /([a-z0-9]+(?:-[a-z0-9]+)*)(?:__([a-z0-9]+(?:-[a-z0-9]+)*))?(?:--([a-z0-9]+(?:-[a-z0-9]+)*))?(?:--([a-z0-9]+(?:-[a-z0-9]+)*))?/i;
 
-    const match = regExp.exec(className);
+    const match = regExp.exec(className) || [];
     return {
       blockName: match[1],
       elementName: match[2],
@@ -158,13 +154,15 @@
 
   function getBemType(className) {
     const parsed = parseClassName(className);
+    if (!parsed.blockName) return 'UNKNOWN';
     if (parsed.modifierName) return 'MODIFIER';
     if (parsed.elementName) return 'ELEMENT';
-    return 'BLOCK';
+    // Structurally ambiguous: has block-like prefix but no BEM delimiters
+    if (className.includes('__') || className.includes('--')) return 'BLOCK';
+    return 'UNCLASSIFIED';
   }
 
-  function testElementForClosestParent(blockName, parentArray) {
-    if (parentArray === undefined) parentArray = [];
+  function testElementForClosestParent(blockName, parentArray = []) {
     for (let i = parentArray.length - 1; i >= 0; i -= 1) {
       if (parentArray[i].some((pc) => pc === blockName)) break;
       if (parentArray[i].some((pc) => getBemType(pc) === 'BLOCK')) return true;
@@ -172,21 +170,22 @@
     return false;
   }
 
-  function validateNode(node, parentArray) {
-    if (parentArray === undefined) parentArray = [];
+  function validateNode(node, parentArray = []) {
     const errors = [];
     const children = Array.from(node.children);
     const currentClasses = Array.from(node.classList);
 
-    const blockClassesInCurrent = currentClasses.filter((cc) => getBemType(cc) === 'BLOCK');
+    const classTypes = new Map(currentClasses.map((cc) => [cc, getBemType(cc)]));
+    const blockClassesInCurrent = currentClasses.filter((cc) => classTypes.get(cc) === 'BLOCK');
     const hasMoreThanOneBlock = blockClassesInCurrent.length > 1;
-    const elementClassesInCurrent = currentClasses.filter((cc) => getBemType(cc) === 'ELEMENT');
+    const elementClassesInCurrent = currentClasses.filter((cc) => classTypes.get(cc) === 'ELEMENT');
     const hasMoreThanOneElement = elementClassesInCurrent.length > 1;
 
     currentClasses.forEach((className) => {
       const parsed = parseClassName(className);
       const { blockName, elementName, modifierName } = parsed;
-      const type = getBemType(className);
+      const type = classTypes.get(className);
+      if (type === 'UNKNOWN' || type === 'UNCLASSIFIED') return;
       const flatParents = parentArray.reduce((a, b) => a.concat(b), []);
 
       if (elementName && !flatParents.some((pc) => pc === blockName)) {
@@ -352,6 +351,7 @@
   }
 
   function makeList(elem, level) {
+    if (elem.nodeType !== Node.ELEMENT_NODE) return null;
     const item = doc.createElement('li');
     item.classList.add(CLASSNAMES.treeLevelItem);
     let tagName = elem.tagName;
@@ -410,7 +410,6 @@
       childrenList.classList.add(CLASSNAMES.treeLevel, `tree-level--${level}`);
 
       Array.from(elem.children).forEach((child) => {
-        checkIsWholePage(child);
         if (!checkIsSkippedTag(child)) {
           const newElem = makeList(child, level);
           if (newElem) childrenList.appendChild(newElem);
@@ -494,15 +493,11 @@
     return skippedTags.includes(elem.tagName);
   }
 
-  function checkIsWholePage(elem) {
-    if (wholePageMarkers.includes(elem.tagName)) isWholePage = true;
-  }
-
   function getTagClass(code, tagName = 'body') {
-    const regexp = new RegExp('<' + tagName + '[^>]*class="([^"]*)"');
+    const regexp = new RegExp('<' + tagName + '[^>]*class=["\']([^"\']*)["\']');
     const result = code.match(regexp);
     if (result) return result[1].split(' ');
-    return '';
+    return null;
   }
 
   // ===================================================================
@@ -528,7 +523,6 @@
     treeContainer.classList.add(CLASSNAMES.treeContainerHidden);
     treePlaceHolder.classList.remove(CLASSNAMES.treeHidden);
     treeContent.classList.add(CLASSNAMES.treeHidden);
-    isWholePage = false;
     currentErrorClassNames = new Set();
     maxDeep = 1;
 
@@ -542,19 +536,12 @@
     const parsedDoc = parser.parseFromString(input, 'text/html');
     const body = parsedDoc.body;
 
-    if (body.querySelector('parsererror')) {
-      insertErrors([], true, 'Помилка парсингу HTML: перевірте валідність коду');
-      isValidating = false;
-      return;
-    }
-
     const errors = validateNode(body);
     insertErrors(errors);
 
-    createTreeFromHTML(input, errors);
-    addClassesActions();
-
     if (errors.length > 0) {
+      createTreeFromHTML(input, errors);
+      addClassesActions();
       treeContainer.classList.remove(CLASSNAMES.treeContainerHidden);
     }
 
