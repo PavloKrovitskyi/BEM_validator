@@ -34,7 +34,6 @@ html {
 }
 
 .main {
-  position: relative;
   flex-grow: 1;
 
   // .main__background
@@ -84,7 +83,6 @@ html {
 // ===================================================================
 .footer {
   position: relative;
-  z-index: 2;
 
   padding-block: 2rem;
   border-top: solid var(--border-subtle) 0.0625rem; // 1/16
