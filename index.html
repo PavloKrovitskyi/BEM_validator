@@ -14,8 +14,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto%20Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style.min.css" rel="stylesheet">
 
+  <script src="js/particles.min.js" defer></script>
   <script src="js/validation.js" defer></script>
   <script src="js/main.js" defer></script>
 </head>
@@ -40,12 +41,13 @@
               <span>Перевірити</span>
             </button>
           </div>
-          <div class="validator__inner">
-            <div class="validator__result result" data-validate-result>
+          <div class="validator__inner validator__inner--hidden" data-validate-result>
+            <div class="validator__header"></div>
+            <div class="validator__errors errors">
             </div>
 
-            <div class="tree tree--hidden">
-              <div class="tree__container">
+            <div class="validator__tree tree">
+              <div class="tree__inner">
                 <div class="tree__column">
 
                   <div class="deep-tree">
@@ -60,18 +62,18 @@
                   <h2 class="tree__title-column">Структура розмітки:</h2>
                   <div class="view-tree">
                     <div class="view-tree__content"></div>
-                    <div class="view-tree__placeholder">
-                      <p>Щоб побачити структуру розмітки, вставте код HTML</p>
-                      <p>Можна вставити як окремі блоки, так&nbsp;і&nbsp;код цілої сторінки.</p>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <img class="character-image" src="https://edu.fls.guru/img/character.webp" alt="Жека">
+
+          <img class="character-image" src="https://edu.fls.guru/img/character.webp" alt="Персонаж Жека"
+            aria-hidden="true">
         </div>
       </article>
+
+      <canvas class="main__background background"></canvas>
     </main>
 
     <footer class="footer">

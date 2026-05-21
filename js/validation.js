@@ -5,21 +5,18 @@
   // --- Selectors ---
   const SELECTORS = {
     validateInput: '[data-validate-input]',
-    validateResult: '[data-validate-result]',
     validateSubmit: '[data-validate-submit]',
+    errorsPanel: '.validator__errors',
     treeViewContent: '.view-tree__content',
-    treeViewPlaceholder: '.view-tree__placeholder',
     treeDeepRange: '.deep-tree__range',
     treeDeepDigit: '.deep-tree__digit',
     treeClassItem: '.tree-class__item',
-    treeContainer: '.tree',
+    validatorInner: '.validator__inner',
+    validatorHeader: '.validator__header',
   };
 
   // --- CSS class names used dynamically ---
   const CLASSNAMES = {
-    errors: 'errors',
-    noErrors: 'no-errors',
-    treeHidden: 'tree-hidden',
     treeLevel: 'tree-level',
     treeLevel0: 'tree-level--0',
     treeLevelItem: 'tree-level__item',
@@ -31,32 +28,35 @@
     treeClassItem: 'tree-class__item',
     treeClassDot: 'tree-class__dot',
     treeHighlightBem: 'tree-highlight--bem',
-    treeContainerHidden: 'tree--hidden',
+    validatorInnerHidden: 'validator__inner--hidden',
+    validatorInnerWarning: 'validator__inner--warning',
+    validatorInnerErrors: 'validator__inner--errors',
+    validatorInnerNoErrors: 'validator__inner--no-errors',
   };
 
   const {
     validateInput,
-    validateResult,
     validateSubmit,
     treeViewContent,
-    treeViewPlaceholder,
     treeDeepRange,
     treeDeepDigit,
+    errorsPanel: errorsPanelSelector,
     treeClassItem: treeClassItemSelector,
-    treeContainer: treeContainerSelector,
+    validatorInner: validatorInnerSelector,
+    validatorHeader: validatorHeaderSelector,
   } = SELECTORS;
 
   const textarea = doc.querySelector(validateInput);
-  const resultPanel = doc.querySelector(validateResult);
+  const errorsPanel = doc.querySelector(errorsPanelSelector);
   const treeContent = doc.querySelector(treeViewContent);
-  const treePlaceHolder = doc.querySelector(treeViewPlaceholder);
   const rangeDeep = doc.querySelector(treeDeepRange);
   const valDeep = doc.querySelector(treeDeepDigit);
-  const treeContainer = doc.querySelector(treeContainerSelector);
+  const validatorInner = doc.querySelector(validatorInnerSelector);
+  const validatorHeader = doc.querySelector(validatorHeaderSelector);
 
   // --- State ---
   let maxDeep = 1;
-  let currentErrorClassNames = new Set();
+
   let bodyClass = null;
   let htmlClass = null;
 
@@ -249,21 +249,19 @@
   }
 
   function insertErrors(errors, emptyInput = false, customMessage) {
-    resultPanel.classList.remove(CLASSNAMES.errors, CLASSNAMES.noErrors);
+    errorsPanel.innerHTML = '';
 
     if (emptyInput) {
-      resultPanel.classList.add(CLASSNAMES.errors);
-      resultPanel.innerHTML = `<h2 class="result__title">${customMessage || 'Вставте код в поле для валідації'}</h2>`;
+      validatorHeader.innerHTML = `<h2 class="validator__title">${customMessage || 'Вставте код в поле для валідації'}</h2>`;
       return;
     }
 
     if (errors.length === 0) {
-      resultPanel.classList.add(CLASSNAMES.noErrors);
-      resultPanel.innerHTML = '<h2 class="result__title">Відмінно, помилки відсутні 😎</h2>';
+      validatorHeader.innerHTML = '<h2 class="validator__title">Відмінно, помилки відсутні 😎</h2>';
       return;
     }
 
-    resultPanel.classList.add(CLASSNAMES.errors);
+    validatorHeader.innerHTML = '<h2 class="validator__title">Упс знайдено помилки 🧐</h2>';
 
     // Group errors by className
     const grouped = new Map();
@@ -280,13 +278,13 @@
     const output = Array.from(grouped.entries())
       .map(
         ([className, { codes, parentArray }]) =>
-          `<li class="result__item item-result">
-        <h3 class="item-result__label">${codes.map((code) => `<span data-code="${code}">${ERROR_TRANSLATION[code]}</span>`).join('')}</h3>
-        <p class="item-result__desc"><code>${getParentPathWithHighlight(parentArray, className)} > <span>.${escapeHTML(className)}</span></code></p></li>`,
+          `<li class="errors__item">
+        <h3 class="errors__label">${codes.map((code) => `<span data-code="${code}">${ERROR_TRANSLATION[code]}</span>`).join('')}</h3>
+        <p class="errors__desc"><code>${getParentPathWithHighlight(parentArray, className)} > <span>.${escapeHTML(className)}</span></code></p></li>`,
       )
       .join('');
 
-    resultPanel.innerHTML = `<h2 class="result__title">Упс знайдено помилки 🧐</h2><ul class="result__list">${output}</ul>`;
+    errorsPanel.innerHTML = `<ul class="errors__list">${output}</ul>`;
   }
 
   // ===================================================================
@@ -294,16 +292,18 @@
   // ===================================================================
 
   function createTreeFromHTML(code, errors) {
-    currentErrorClassNames = new Set(errors.map((e) => e.className));
+    const errorsByClassName = new Map();
+    errors.forEach((e) => {
+      if (!errorsByClassName.has(e.className)) {
+        errorsByClassName.set(e.className, []);
+      }
+      errorsByClassName.get(e.className).push(e);
+    });
 
     const codeOutput = doc.createElement('div');
     let codeOutputTarget = codeOutput;
 
-    treePlaceHolder.classList.add(CLASSNAMES.treeHidden);
-    treeContent.classList.add(CLASSNAMES.treeHidden);
-
     if (!code) {
-      treePlaceHolder.classList.remove(CLASSNAMES.treeHidden);
       setRange();
       return;
     }
@@ -335,7 +335,7 @@
       codeOutputTarget.appendChild(parsedBody.firstChild);
     }
 
-    const items = makeList(codeOutput, 1);
+    const items = makeList(codeOutput, 1, errorsByClassName);
 
     if (treeContent.childElementCount > 0) {
       treeContent.removeChild(treeContent.firstElementChild);
@@ -346,11 +346,11 @@
     list.appendChild(items);
     treeContent.appendChild(list);
 
-    treeContent.classList.remove(CLASSNAMES.treeHidden);
     setRange();
   }
 
-  function makeList(elem, level) {
+  function makeList(elem, level, errorsByClassName, parentClassLists) {
+    if (parentClassLists === undefined) parentClassLists = [];
     if (elem.nodeType !== Node.ELEMENT_NODE) return null;
     const item = doc.createElement('li');
     item.classList.add(CLASSNAMES.treeLevelItem);
@@ -387,8 +387,14 @@
         classItemBtn.classList.add(CLASSNAMES.treeClassItem);
         classItemBtn.textContent = classItem;
 
-        if (currentErrorClassNames.has(classItem)) {
-          classItemBtn.classList.add(CLASSNAMES.treeHighlightBem);
+        if (errorsByClassName.has(classItem)) {
+          const classErrors = errorsByClassName.get(classItem);
+          const matches = classErrors.some(function (error) {
+            return parentArraysMatch(error.parentArray, parentClassLists);
+          });
+          if (matches) {
+            classItemBtn.classList.add(CLASSNAMES.treeHighlightBem);
+          }
         }
 
         classSpan.appendChild(classItemBtn);
@@ -409,9 +415,10 @@
       level++;
       childrenList.classList.add(CLASSNAMES.treeLevel, `tree-level--${level}`);
 
-      Array.from(elem.children).forEach((child) => {
+      Array.from(elem.children).forEach(function (child) {
         if (!checkIsSkippedTag(child)) {
-          const newElem = makeList(child, level);
+          var childParentLists = parentClassLists.concat([Array.from(elem.classList)]);
+          var newElem = makeList(child, level, errorsByClassName, childParentLists);
           if (newElem) childrenList.appendChild(newElem);
         }
       });
@@ -438,15 +445,15 @@
 
         if (this.classList.contains(CLASSNAMES.treeHighlightBem)) {
           const className = '.' + this.textContent;
-          const errorItems = resultPanel.querySelectorAll('.item-result');
+          const errorItems = errorsPanel.querySelectorAll('.errors__item');
           for (const item of errorItems) {
-            const classSpan = item.querySelector('.item-result__desc code span:last-child');
+            const classSpan = item.querySelector('.errors__desc code span:last-child');
             if (classSpan && classSpan.textContent === className) {
               item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              item.classList.remove('item-result--flash');
+              item.classList.remove('errors__item--flash');
               // Force reflow to restart animation
               void item.offsetWidth;
-              item.classList.add('item-result--flash');
+              item.classList.add('errors__item--flash');
               break;
             }
           }
@@ -493,6 +500,19 @@
     return skippedTags.includes(elem.tagName);
   }
 
+  function parentArraysMatch(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      const innerA = a[i];
+      const innerB = b[i];
+      if (innerA.length !== innerB.length) return false;
+      for (let j = 0; j < innerA.length; j += 1) {
+        if (innerA[j] !== innerB[j]) return false;
+      }
+    }
+    return true;
+  }
+
   function getTagClass(code, tagName = 'body') {
     const regexp = new RegExp('<' + tagName + '[^>]*class=["\']([^"\']*)["\']');
     const result = code.match(regexp);
@@ -520,14 +540,11 @@
 
     const input = textarea.value.trim();
 
-    treeContainer.classList.add(CLASSNAMES.treeContainerHidden);
-    treePlaceHolder.classList.remove(CLASSNAMES.treeHidden);
-    treeContent.classList.add(CLASSNAMES.treeHidden);
-    currentErrorClassNames = new Set();
     maxDeep = 1;
 
     if (input === '') {
       insertErrors([], true);
+      setInnerModifier(CLASSNAMES.validatorInnerWarning);
       isValidating = false;
       return;
     }
@@ -540,12 +557,24 @@
     insertErrors(errors);
 
     if (errors.length > 0) {
+      setInnerModifier(CLASSNAMES.validatorInnerErrors);
       createTreeFromHTML(input, errors);
       addClassesActions();
-      treeContainer.classList.remove(CLASSNAMES.treeContainerHidden);
+    } else {
+      setInnerModifier(CLASSNAMES.validatorInnerNoErrors);
     }
 
     isValidating = false;
+  }
+
+  function setInnerModifier(modifier) {
+    validatorInner.classList.remove(
+      CLASSNAMES.validatorInnerHidden,
+      CLASSNAMES.validatorInnerWarning,
+      CLASSNAMES.validatorInnerErrors,
+      CLASSNAMES.validatorInnerNoErrors
+    );
+    validatorInner.classList.add(modifier);
   }
 
   // ===================================================================
